@@ -17,12 +17,9 @@ from torch_geometric.utils.convert import from_networkx
 from torch_geometric.utils import to_networkx
 
 #GITHUB COPILOT WAS USED IN THIS PROJECT FOR OUTPUT OF THE GCN MODEL
+#https://github.com/njmarko/machine-learning-with-graphs/blob/master/MyAttempts/CS224W_Colab_0.ipynb For GCN MODEL EXAMPLE
 
 def GenerateSirModel(N):
-    #N = 100 #Graph size 
-    #set seed of graph
-
-
     #g = nx.erdos_renyi_graph(N, 0.2, seed=42)
     g = nx.erdos_renyi_graph(N, 0.2)
 
@@ -33,19 +30,14 @@ def GenerateSirModel(N):
     #keep node layout
     pos = nx.spring_layout(g)
 
-    #get random node
+    #get random node to infect graph
     randomInfectedNode = np.random.randint(0, N)
-    #set node to infected
-    #g.nodes[randomInfectedNode]['state'] = 6
 
-    # Model selection
-    #model  = ep.SEIRModel(g)
     model = ep.SIRModel(g)
-
 
     L = nx.normalized_laplacian_matrix(g)
     e = np.linalg.eigvals(L.toarray())
-    largestEigvalue = max(e)
+    largestEigvalue = max(e) #largest eigenvalue of the graph for lambda
 
     #similar configurations as the barbasi paper
     R0 = 1.2
@@ -56,6 +48,9 @@ def GenerateSirModel(N):
     beta = R0 * gamma/largestEigvalue
     ITERATIONS = 15
 
+    '''
+    CODE FOR SIER MODEL
+    '''
     #pick a random number from 0 to ITERATIONS to slect as a 
     # # Model Configuration
     # cfg = mc.Configuration()
@@ -95,9 +90,9 @@ def GenerateSirModel(N):
     #draw graph
     tempDict = {i: 0 for i in range(N)}
     #for allowing node fill in between empty spots in data
-    #temp = NodeFeatures
+
     randomFeature = []
-    #print(tempDict)
+
     #get random set of features
     randomFeatureNumber = np.random.randint(0, ITERATIONS)
     #fill in missing spots of data
@@ -124,21 +119,22 @@ def GenerateSirModel(N):
 
     
 
-
+'''
+    CODE FOR GCN MODEL TO PREDICT NODES
+'''
 def GCN(train_loader, val_loader, test_loader, num_epochs):
+    #INITIALIZE MODEL
     class GCN(nn.Module):
         def __init__(self):
             super(GCN, self).__init__()
-            self.conv1 = GCNConv(1, 16)
-            self.conv2 = GCNConv(16, 4)
+            self.conv1 = GCNConv(1, 16) # 1 input feature
+            self.conv2 = GCNConv(16, 4) 
 
         def forward(self, data):
             x, edge_index = data.x, data.edge_index
-
             x = self.conv1(x, edge_index)
             x = torch.relu(x)
             x = self.conv2(x, edge_index)
-
             return x
 
     model_gnn = GCN()
@@ -164,8 +160,12 @@ def GCN(train_loader, val_loader, test_loader, num_epochs):
         correct_train = 0
         total_train = 0
         correct_test = 0
+
+        '''
+            Code for testing, training, and validation metrics boilerplate code from COPILOT
+        '''
         with torch.no_grad():
-            for data in train_loader:
+            for data in train_loader: #for each data piece
                 output_train = model_gnn(data)
                 _, predicted_train = output_train.max(1)
                 total_train += data.y.size(0)
@@ -209,10 +209,7 @@ def GCN(train_loader, val_loader, test_loader, num_epochs):
         print(f'Epoch [{epoch + 1}/{num_epochs}], Train Accuracy: {train_accuracy:.2f}%, Val Accuracy: {val_accuracy:.2f}%')
         print(test_accuracy)
 
-
-
-
-        #Plot the accuracy over epochs
+    #Plot the accuracy over epochs
     plt.plot(range(1, num_epochs + 1), train_accuracies, label='Train Accuracy')
     plt.plot(range(1, num_epochs + 1), val_accuracies, label='Validation Accuracy')
     plt.plot(range(1, num_epochs + 1), test_accuracies, label='Test Accuracy')
@@ -221,11 +218,14 @@ def GCN(train_loader, val_loader, test_loader, num_epochs):
     plt.legend()
     plt.show()
     #save graph
-    plt.savefig('accuracy.png')
+    #plt.savefig('accuracy.png')
     
     #nx.draw_networkx(to_networkx(data), node_color=output_train.argmax(dim=1), cmap='coolwarm')
 
 
+'''
+    CODE FOR GENERATING DATA
+'''
 def create_data(g, randomFeature, randomFeatureInfected, randomInfectedNode):
     edge_index = torch.tensor(list(g.edges)).t().contiguous()
     #y is the selected features of the graph at random time
@@ -236,10 +236,10 @@ def create_data(g, randomFeature, randomFeatureInfected, randomInfectedNode):
     return data
 
 def main():
+    #CONSTANTS
     DATASETSIZE = 200 #how many datasets to get
     N = 100 #Graph size
     EPOCHS = 100
-
 
     graphDataset = [GenerateSirModel(N) for i in range(DATASETSIZE)]
     
@@ -247,8 +247,6 @@ def main():
     graphDataLST = [create_data(*graph) for graph in graphDataset]
     train_data, test_data = train_test_split(graphDataLST, test_size=0.2, random_state=42)
     train_data, val_data = train_test_split(train_data, test_size=0.1, random_state=42)
-   # print(train_data)
-    ##print(train_data[0].y)
 
     # Create DataLoader for training and testing
     train_loader = DataLoader(train_data, batch_size=10, shuffle=True)

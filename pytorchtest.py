@@ -32,3 +32,5 @@ pyg_graph = from_networkx(G)
 print(pyg_graph.x)
 
 nx.draw(G=G, pos=nx.spring_layout(G), with_labels=True)
+
+#https://stackoverflow.com/questions/70452465/how-to-load-in-graph-from-networkx-into-pytorch-geometric-and-set-node-features
